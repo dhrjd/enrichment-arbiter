@@ -1,4 +1,4 @@
-﻿# enrichment-arbiter
+# enrichment-arbiter
 
 **Buy the verified hit, not the call.** A self-hosted, cost-optimizing router that decides which data
 vendor to ask for a work email, phone number, or company record â€” and learns from what actually works.

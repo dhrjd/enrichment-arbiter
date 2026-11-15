@@ -1,4 +1,4 @@
-﻿# Architecture
+# Architecture
 
 This document explains how `enrichment-arbiter` is built and why. For step-by-step usage, see
 [`USAGE.md`](USAGE.md); for a visual version, open [`walkthrough.html`](walkthrough.html).

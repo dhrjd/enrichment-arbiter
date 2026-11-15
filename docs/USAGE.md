@@ -1,4 +1,4 @@
-﻿# Using enrichment-arbiter
+# Using enrichment-arbiter
 
 This is the operator guide. It assumes you have cloned the repo and want to run it against real
 vendors, or extend it. For the internals and the math derivations, read

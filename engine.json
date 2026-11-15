@@ -1,4 +1,4 @@
-﻿{
+{
   "name": "enrichment-arbiter",
   "version": "0.1.0",
   "description": "Cost-optimizing data-provider evaluation and dynamic waterfall routing for person/company enrichment.",
