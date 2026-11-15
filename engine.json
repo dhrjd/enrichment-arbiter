@@ -1,0 +1,47 @@
+{
+  "name": "enrichment-arbiter",
+  "version": "0.1.0",
+  "description": "Cost-optimizing data-provider evaluation and dynamic waterfall routing for person/company enrichment.",
+  "status": "ready",
+  "kind": "pipeline",
+  "entry": ["{python}", "run.py"],
+  "cwd": ".",
+  "help": "run.py --help",
+  "output": "json",
+  "commands": {
+    "init":          { "desc": "create the state database and seed providers", "costs": null, "writes": "state" },
+    "doctor":        { "desc": "check deps, secrets and db",                   "costs": null, "writes": null },
+    "status":        { "desc": "counts and current scores",                    "costs": null, "writes": null },
+    "provider add":  { "desc": "register or update a provider config",         "costs": null, "writes": "state" },
+    "provider list": { "desc": "list providers and cooldowns",                 "costs": null, "writes": null },
+    "enrich":        { "desc": "run the waterfall for one lead",               "costs": "vendor credits", "writes": "state, runs/" },
+    "scorecard":     { "desc": "rankings, match rates, accuracy and ECPVH",    "costs": null, "writes": "runs/" },
+    "recalc":        { "desc": "recompute scores from logs now",               "costs": null, "writes": "state" },
+    "feedback":      { "desc": "ingest a bounce/reply event by email or id",   "costs": null, "writes": "state" },
+    "golden-probe":  { "desc": "probe every provider against the golden set",  "costs": "vendor credits", "writes": "state, runs/" }
+  },
+  "network": true,
+  "spends_money": "Vendor credit APIs; enrich and golden-probe are gated by --max-budget (golden-probe also needs --yes)",
+  "accounts": { "hunter": "Reo", "apollo": "ALT (Reo)" },
+  "state": {
+    "path": "state/arbiter.db",
+    "idempotent": true,
+    "backup": "state/backups/"
+  },
+  "ports": {
+    "serve": { "bind": "127.0.0.1", "port": 8790, "entry": ["{python}", "run.py", "serve"], "optional": true }
+  },
+  "secrets": [
+    "APOLLO_API_KEY",
+    "PROSPEO_API_KEY",
+    "FINDYMAIL_API_KEY",
+    "HUNTER_API_KEY",
+    "TOMBA_API_KEY",
+    "SNOV_API_KEY",
+    "ENROW_API_KEY",
+    "PDL_API_KEY"
+  ],
+  "writes": "runs/, state/",
+  "inputs": "lead fields via CLI flags or a JSON request; never modified",
+  "docs": "README.md"
+}

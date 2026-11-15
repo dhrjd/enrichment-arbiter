@@ -1,0 +1,1065 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>enrichment-arbiter — full walkthrough</title>
+<style>
+  :root{
+    --bg:#f7f8fa; --panel:#ffffff; --ink:#1c2330; --muted:#5b6676;
+    --line:#e3e7ee; --accent:#3355d1; --accent2:#0f9d76; --warn:#b4541a;
+    --code:#0f172a; --codeink:#e6edf7; --soft:#eef2f9; --bad:#c0392b;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  a{color:var(--accent);text-decoration:none}
+  a:hover{text-decoration:underline}
+  code,pre,kbd{font-family:"Cascadia Code",Consolas,"SF Mono",Menlo,monospace}
+  code{background:var(--soft);padding:.08em .35em;border-radius:5px;font-size:.9em}
+  pre{background:var(--code);color:var(--codeink);padding:16px 18px;border-radius:12px;
+    overflow:auto;font-size:13.5px;line-height:1.55}
+  pre code{background:none;padding:0;color:inherit;font-size:1em}
+  h1,h2,h3,h4{line-height:1.25}
+  h2{font-size:1.6rem;margin:2.4rem 0 .6rem;padding-top:.4rem;border-top:1px solid var(--line)}
+  h3{font-size:1.2rem;margin:1.7rem 0 .4rem;color:#22304a}
+  h4{font-size:1.02rem;margin:1.3rem 0 .3rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+  p{margin:.6rem 0}
+  ul,ol{margin:.5rem 0 .8rem 1.25rem;padding:0}
+  li{margin:.28rem 0}
+  header.hero{background:linear-gradient(135deg,#1b2b57,#3355d1 55%,#0f9d76);color:#fff;
+    padding:56px 28px 46px}
+  header.hero .wrap{max-width:1080px;margin:0 auto}
+  header.hero h1{font-size:2.1rem;margin:0 0 .35rem}
+  header.hero p{margin:.35rem 0;color:#dbe4ff;max-width:820px}
+  .pill{display:inline-block;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.28);
+    padding:4px 12px;border-radius:999px;font-size:12.5px;margin:6px 8px 0 0;letter-spacing:.02em}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 24px}
+  main{max-width:1080px;margin:0 auto;padding:8px 24px 90px}
+  .toc{background:var(--panel);border:1px solid var(--line);border-radius:14px;
+    padding:18px 22px;margin:26px 0 8px;box-shadow:0 1px 2px rgba(20,30,60,.04)}
+  .toc h2{border:0;margin:.1rem 0 .6rem;padding:0;font-size:1.1rem}
+  .toc ol{columns:2;column-gap:38px;margin-left:1.1rem}
+  @media(max-width:720px){.toc ol{columns:1}header.hero h1{font-size:1.55rem}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;
+    padding:18px 22px;margin:16px 0;box-shadow:0 1px 2px rgba(20,30,60,.04)}
+  .note{border-left:4px solid var(--accent);background:#f2f5ff}
+  .good{border-left:4px solid var(--accent2);background:#f0faf6}
+  .warnbox{border-left:4px solid var(--warn);background:#fff7f0}
+  .badbox{border-left:4px solid var(--bad);background:#fdf2f2}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px}
+  .stat{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+  .stat .k{font-size:1.5rem;font-weight:700;color:var(--accent)}
+  .stat .l{font-size:.85rem;color:var(--muted)}
+  table{border-collapse:collapse;width:100%;margin:.8rem 0;font-size:14.5px;background:var(--panel)}
+  th,td{border:1px solid var(--line);padding:9px 11px;text-align:left;vertical-align:top}
+  th{background:var(--soft);font-weight:600}
+  tr:nth-child(even) td{background:#fbfcfe}
+  .eq{font-family:"Cambria Math",Cambria,Georgia,serif;font-size:1.18rem;
+    background:#f6f8fc;border:1px solid var(--line);border-left:4px solid var(--accent);
+    border-radius:10px;padding:16px 18px;margin:14px 0;overflow-x:auto}
+  .eq .label{display:block;font-family:inherit;font-size:.78rem;color:var(--muted);
+    text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
+  .frac{display:inline-flex;flex-direction:column;vertical-align:middle;text-align:center;margin:0 .2em}
+  .frac .num{border-bottom:1.4px solid currentColor;padding:0 .45em}
+  .frac .den{padding:0 .45em}
+  .muted{color:var(--muted)}
+  .kbd{font-family:inherit;background:#eef;border:1px solid #ccd;border-bottom-width:2px;
+    border-radius:5px;padding:1px 7px;font-size:.86em}
+  .tag{display:inline-block;font-size:11.5px;font-weight:700;letter-spacing:.05em;
+    padding:2px 8px;border-radius:6px;text-transform:uppercase}
+  .tag.done{background:#e3f6ee;color:#0b7a5b}
+  .tag.todo{background:#fdece3;color:#a8480f}
+  .tag.part{background:#eaf0ff;color:#2746b8}
+  .files{font-size:14px}
+  .files td:first-child{white-space:nowrap;font-family:Consolas,monospace;color:#2746b8}
+  .flow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:12px 0}
+  .node{background:var(--panel);border:1px solid var(--line);border-radius:10px;
+    padding:9px 13px;font-size:14px;font-weight:600}
+  .arrow{color:var(--muted);font-weight:700}
+  details{background:var(--soft);border-radius:10px;padding:10px 16px;margin:12px 0}
+  summary{cursor:pointer;font-weight:600}
+  footer{border-top:1px solid var(--line);padding:26px;text-align:center;color:var(--muted);font-size:13.5px}
+  .anchor{scroll-margin-top:16px}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <h1>enrichment-arbiter</h1>
+    <p>A complete walkthrough: what it is, every piece of the math, the logic behind each decision, what is built,
+       what is pending, and how it compares to commercial waterfall tools such as Clay.</p>
+    <div>
+      <span class="pill">Engine: <strong>ready</strong></span>
+      <span class="pill">Kind: pipeline (CLI-first)</span>
+      <span class="pill">11 tests passing</span>
+      <span class="pill">Live Hunter run verified</span>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<nav class="toc anchor" id="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#tldr">TL;DR — what this is in one page</a></li>
+    <li><a href="#glossary">Every abbreviation, decoded</a></li>
+    <li><a href="#purpose">The problem and the purpose</a></li>
+    <li><a href="#arch">Architecture and data flow</a></li>
+    <li><a href="#data">The database, table by table</a></li>
+    <li><a href="#math">The math, derived from scratch</a></li>
+    <li><a href="#lifecycle">A request, step by step</a></li>
+    <li><a href="#verify">Verification logic</a></li>
+    <li><a href="#providers">Providers and adapters</a></li>
+    <li><a href="#codemap">File-by-file code map</a></li>
+    <li><a href="#done">What is done today</a></li>
+    <li><a href="#todo">What is not done yet (and limits)</a></li>
+    <li><a href="#roadmap">What it can become after later phases</a></li>
+    <li><a href="#clay">Compared with Clay waterfall enrichment</a></li>
+    <li><a href="#business">How this helps a company</a></li>
+    <li><a href="#howto">How to run it, command by command</a></li>
+    <li><a href="#appendix">Appendix: constants, schema, real output</a></li>
+  </ol>
+</nav>
+
+<!-- ============================================================ -->
+<section id="tldr" class="anchor">
+<h2>1. TL;DR — what this is in one page</h2>
+
+<p><strong>enrichment-arbiter</strong> is a self-hosted engine that decides <em>which data vendor to ask first</em>
+when you need to fill in a missing piece of information about a person or a company — for example, a work email
+address or a company's firmographics — and it does so while spending as little money as possible and trusting the
+answer as much as possible.</p>
+
+<p>The core idea is a <strong>dynamic waterfall</strong>. Instead of always calling the same vendor, or calling all of
+them and paying everyone, the engine:</p>
+
+<ol>
+  <li>checks a <strong>cache</strong> so it never pays twice for the same person;</li>
+  <li><strong>ranks</strong> every vendor for this specific task and customer segment by a score that mixes quality,
+      cost, and speed;</li>
+  <li>calls vendors <strong>one at a time, cheapest-best first</strong>, within a dollar budget;</li>
+  <li><strong>verifies</strong> the returned email/phone before accepting it;</li>
+  <li>stops at the first verified hit, and <strong>logs</strong> every attempt;</li>
+  <li><strong>learns</strong> from the outcomes — and from downstream bounces — so the ranking improves over time;</li>
+  <li>occasionally <strong>explores</strong> a lower-ranked vendor to discover if it has quietly gotten better.</li>
+</ol>
+
+<p>The single number at the center of everything is <strong>ECPVH — Effective Cost Per Verified Hit</strong> — the
+expected dollars you must spend to walk away with one <em>verified, working</em> data point. Vendors are ordered by a
+<strong>composite routing score</strong> that rewards yield and penalizes both cost and latency.</p>
+
+<div class="card good">
+<strong>Proven on real data.</strong> A live run asked Hunter for a person at <code>stripe.com</code> and got back an
+MX-verified address in 2,391&nbsp;ms for about $0.02. The same lookup run a second time was served from cache at
+<strong>$0.00</strong> with no API call.
+</div>
+
+<p>It is deliberately <strong>not</strong> a cloud SaaS. It is a CLI-first engine that lives in this repo, keeps its
+state in a local SQLite file, reads secrets from the shared <code>.env</code>, and is invoked the same way Hermes
+invokes every other engine in this workspace.</p>
+</section>
+
+<!-- ============================================================ -->
+<section id="glossary" class="anchor">
+<h2>2. Every abbreviation, decoded</h2>
+
+<p>Terms used throughout this document and the codebase.</p>
+
+<table>
+<thead><tr><th>Abbreviation</th><th>Stands for</th><th>What it means here</th></tr></thead>
+<tbody>
+<tr><td><strong>ECPVH</strong></td><td>Effective Cost Per Verified Hit</td><td>The expected dollars to obtain one verified data point from a vendor. The central ranking metric.</td></tr>
+<tr><td><strong>TTL</strong></td><td>Time To Live</td><td>How long a cached answer is considered valid before it expires and must be re-fetched.</td></tr>
+<tr><td><strong>MX</strong></td><td>Mail eXchanger (DNS record)</td><td>A DNS record saying which server accepts email for a domain. If a domain has an MX record, it can plausibly receive mail.</td></tr>
+<tr><td><strong>DNS</strong></td><td>Domain Name System</td><td>The internet's phone book; turns a domain into records like MX or A.</td></tr>
+<tr><td><strong>SMTP</strong></td><td>Simple Mail Transfer Protocol</td><td>The protocol used to send/verify mailboxes on port 25. We deliberately do <em>not</em> use it (blocked on most cloud IPs).</td></tr>
+<tr><td><strong>p95</strong></td><td>95th percentile</td><td>The latency below which 95% of requests fall. A tail-latency measure; worst-case experience.</td></tr>
+<tr><td><strong>RPS</strong></td><td>Requests Per Second</td><td>Rate limit field per vendor (<code>max_rps</code>). Declared today, not yet enforced.</td></tr>
+<tr><td><strong>WAL</strong></td><td>Write-Ahead Logging</td><td>An SQLite mode that lets readers proceed while a write happens, improving concurrency.</td></tr>
+<tr><td><strong>SQL</strong></td><td>Structured Query Language</td><td>The language used to query the SQLite database.</td></tr>
+<tr><td><strong>DB</strong></td><td>Database</td><td>Here, a single SQLite file: <code>state/arbiter.db</code>.</td></tr>
+<tr><td><strong>JSON</strong></td><td>JavaScript Object Notation</td><td>The data format on stdout and in the API rows.</td></tr>
+<tr><td><strong>API</strong></td><td>Application Programming Interface</td><td>A programmatic endpoint a vendor exposes so code can query it.</td></tr>
+<tr><td><strong>HTTP</strong></td><td>HyperText Transfer Protocol</td><td>The request/response protocol used to talk to vendor APIs.</td></tr>
+<tr><td><strong>429</strong></td><td>HTTP "Too Many Requests"</td><td>Vendor says you are rate-limited; treated as a failure signal.</td></tr>
+<tr><td><strong>5xx</strong></td><td>HTTP 500–599 server errors</td><td>Vendor-side failure; also a failure signal.</td></tr>
+<tr><td><strong>2xx</strong></td><td>HTTP 200–299 success</td><td>A healthy response; resets the circuit breaker.</td></tr>
+<tr><td><strong>CLI</strong></td><td>Command-Line Interface</td><td>The engine is driven by commands like <code>enrich</code>, <code>scorecard</code>.</td></tr>
+<tr><td><strong>PII</strong></td><td>Personally Identifiable Information</td><td>Emails/phones. Stored locally in the DB for attribution; never sent to a third party by us beyond the vendor call.</td></tr>
+<tr><td><strong>E.164</strong></td><td>International phone format</td><td>A phone-number standard: a <code>+</code>, country code, then digits (7–15 total).</td></tr>
+<tr><td><strong>UUID</strong></td><td>Universally Unique Identifier</td><td>A random ID assigned to each request for tracing.</td></tr>
+<tr><td><strong>SHA-256</strong></td><td>Secure Hash Algorithm, 256-bit</td><td>Used to turn a lookup into a fixed-size cache key.</td></tr>
+<tr><td><strong>SaaS</strong></td><td>Software as a Service</td><td>A segment example (<code>us_saas</code>); also the business model of vendors.</td></tr>
+<tr><td><strong>GTM</strong></td><td>Go-To-Market</td><td>The sales/marketing motion this enrichment feeds into.</td></tr>
+<tr><td><strong>ICP</strong></td><td>Ideal Customer Profile</td><td>The kind of company/person you want to sell to.</td></tr>
+<tr><td><strong>SDR</strong></td><td>Sales Development Representative</td><td>The person who emails prospects; the main consumer of enriched emails.</td></tr>
+<tr><td><strong>CRM</strong></td><td>Customer Relationship Management</td><td>Where enriched records usually end up.</td></tr>
+<tr><td><strong>ROI</strong></td><td>Return On Investment</td><td>Value gained relative to money spent.</td></tr>
+<tr><td><strong>CAC</strong></td><td>Customer Acquisition Cost</td><td>What it costs to win a customer; enrichment reduces wasted outreach.</td></tr>
+<tr><td><strong>Firmographics</strong></td><td>—</td><td>Company-level facts: name, domain, headcount, industry, revenue band, etc.</td></tr>
+<tr><td><strong>Enrichment</strong></td><td>—</td><td>Appending missing data to a record (email, phone, company details).</td></tr>
+<tr><td><strong>Waterfall</strong></td><td>—</td><td>Trying vendors in sequence until one returns an acceptable answer.</td></tr>
+<tr><td><strong>Bounce</strong></td><td>—</td><td>An email that could not be delivered (hard bounce = permanent). A signal the data was wrong.</td></tr>
+<tr><td><strong>Deliverability</strong></td><td>—</td><td>The share of your emails that actually land in inboxes, not spam or bounces.</td></tr>
+<tr><td><strong>Segment</strong></td><td>—</td><td>A slice of traffic with its own scoreboard, e.g. <code>global</code>, <code>us_saas</code>, <code>eu_enterprise</code>.</td></tr>
+<tr><td><strong>Exploit / Explore</strong></td><td>—</td><td>Use the best-known option vs. try something else to learn. From reinforcement learning.</td></tr>
+<tr><td><strong>Epsilon-greedy</strong></td><td>—</td><td>A strategy: exploit with probability 1−ε, explore with probability ε (here ε = 0.05).</td></tr>
+<tr><td><strong>Circuit breaker</strong></td><td>—</td><td>Temporarily stop calling a failing vendor instead of repeatedly hitting it.</td></tr>
+<tr><td><strong>Prior / Bayesian smoothing</strong></td><td>—</td><td>Starting assumptions added to real counts so small samples don't swing wildly.</td></tr>
+<tr><td><strong>ASGI / REST</strong></td><td>Async Server Gateway Interface / Representational State Transfer</td><td>Concepts for the phase-3 HTTP API we have not built yet.</td></tr>
+<tr><td><strong>WIP</strong></td><td>Work In Progress</td><td>Engine status while unfinished. This one is now <strong>ready</strong>.</td></tr>
+</tbody>
+</table>
+</section>
+
+<!-- ============================================================ -->
+<section id="purpose" class="anchor">
+<h2>3. The problem and the purpose</h2>
+
+<h3>The problem</h3>
+<p>A revenue team wants to email or call a list of people. The list is missing work emails and phone numbers. Several
+vendors sell that data: Apollo, Hunter, Prospeo, Findymail, Clearbit, PeopleDataLabs, and many more. They disagree
+with each other, they cost different amounts, they are better or worse in different countries and company sizes, and
+their databases change over time.</p>
+
+<p>The naive approaches all waste money or trust:</p>
+<ul>
+  <li><strong>Always use vendor A.</strong> Simple, but overpays and gets whatever A's coverage happens to be.</li>
+  <li><strong>Call everyone and merge.</strong> Maximum coverage, but you pay every vendor for every record.</li>
+  <li><strong>Static waterfall</strong> (A then B then C forever). Better, but the order was decided once and never
+      adapts when B improves, A degrades, or a country's coverage shifts.</li>
+</ul>
+
+<h3>The purpose of this engine</h3>
+<p>Make the "which vendor first" decision <strong>data-driven, cost-aware, continuous, and auditable</strong> — and do it
+inside our own infrastructure so spend, data, and logic stay under our control.</p>
+
+<div class="grid">
+  <div class="stat"><div class="k">$</div><div class="l">Minimize cost per <em>working</em> data point, not per call</div></div>
+  <div class="stat"><div class="k">✓</div><div class="l">Trust only verified values, not raw vendor claims</div></div>
+  <div class="stat"><div class="k">↺</div><div class="l">Learn continuously from production outcomes and bounces</div></div>
+  <div class="stat"><div class="k">⚖</div><div class="l">Adapt per task and per segment, not one global order</div></div>
+  <div class="stat"><div class="k">⏻</div><div class="l">Fail safe: never crash the pipeline on a vendor error</div></div>
+  <div class="stat"><div class="k">🔒</div><div class="l">Self-hosted: keys, data, and decisions stay local</div></div>
+</div>
+
+<h3>What it is <em>not</em></h3>
+<ul>
+  <li>It is not a database of people. It does not own the data; it orchestrates vendors that do.</li>
+  <li>It is not a CRM. It returns enriched records; a pipeline writes them where they belong.</li>
+  <li>It is not (yet) a web service. Today it is a command-line engine; an HTTP layer is a later phase.</li>
+</ul>
+</section>
+
+<!-- ============================================================ -->
+<section id="arch" class="anchor">
+<h2>4. Architecture and data flow</h2>
+
+<h3>Two planes, one database</h3>
+<p>Conceptually there are two planes. In this implementation both run inside one process, but they are cleanly
+separated in code so they can later be split.</p>
+
+<table>
+<thead><tr><th>Plane</th><th>Runs when</th><th>Modules</th><th>Job</th></tr></thead>
+<tbody>
+<tr><td><strong>Execution plane</strong></td><td>On every lookup</td><td><code>router.py</code>, <code>verifier.py</code>, <code>providers/*</code></td><td>Serve a cached answer or run the waterfall and verify the result.</td></tr>
+<tr><td><strong>Control plane</strong></td><td>Periodically / on demand</td><td><code>evaluator.py</code></td><td>Recompute scores from logs, run golden-dataset probes, absorb feedback.</td></tr>
+</tbody>
+</table>
+
+<h3>Request path</h3>
+<div class="flow">
+  <span class="node">Request</span><span class="arrow">→</span>
+  <span class="node">Lookup hash</span><span class="arrow">→</span>
+  <span class="node">Cache?</span><span class="arrow">├ hit →</span>
+  <span class="node">Return</span>
+</div>
+<div class="flow">
+  <span class="node">Miss</span><span class="arrow">→</span>
+  <span class="node">Rank providers</span><span class="arrow">→</span>
+  <span class="node">ε-explore?</span><span class="arrow">→</span>
+  <span class="node">Budget gate</span><span class="arrow">→</span>
+  <span class="node">Call vendor</span><span class="arrow">→</span>
+  <span class="node">Verify</span><span class="arrow">→</span>
+  <span class="node">Log</span><span class="arrow">→</span>
+  <span class="node">Cache + return</span>
+</div>
+
+<h3>Learning path</h3>
+<div class="flow">
+  <span class="node">enrichment_logs</span><span class="arrow">→</span>
+  <span class="node">recalc (every 20 logs / on demand)</span><span class="arrow">→</span>
+  <span class="node">provider_scores</span><span class="arrow">→</span>
+  <span class="node">next ranking</span>
+</div>
+<div class="flow">
+  <span class="node">Downstream bounce</span><span class="arrow">→</span>
+  <span class="node">feedback</span><span class="arrow">→</span>
+  <span class="node">mark log + evict cache</span><span class="arrow">→</span>
+  <span class="node">recalc</span>
+</div>
+
+<p class="muted">Because scoring is recomputed from immutable logs, the system can always be rebuilt from history. The
+scores are a cache of the logs, not a second source of truth.</p>
+</section>
+
+<!-- ============================================================ -->
+<section id="data" class="anchor">
+<h2>5. The database, table by table</h2>
+
+<p>One SQLite file: <code>state/arbiter.db</code>, opened in WAL mode. Four tables.</p>
+
+<h3><code>providers</code> — static configuration and health</h3>
+<table>
+<thead><tr><th>Column</th><th>Meaning</th></tr></thead>
+<tbody>
+<tr><td><code>id</code>, <code>task_type</code></td><td><strong>Composite primary key.</strong> One vendor can serve several tasks with different pricing, so identity is the pair, not the name alone.</td></tr>
+<tr><td><code>cost_per_attempt</code></td><td>Dollars charged just for calling, even on a miss (often $0 for credit-on-match vendors).</td></tr>
+<tr><td><code>cost_per_match</code></td><td>Dollars charged when data is returned (a credit).</td></tr>
+<tr><td><code>max_rps</code></td><td>Vendor rate limit; declared, not yet enforced.</td></tr>
+<tr><td><code>is_active</code></td><td>Soft on/off switch without deleting config.</td></tr>
+<tr><td><code>consecutive_failures</code></td><td>Circuit-breaker counter; reset on any 2xx.</td></tr>
+<tr><td><code>cooldown_until</code></td><td>If in the future, the vendor is excluded from the waterfall.</td></tr>
+</tbody>
+</table>
+
+<h3><code>provider_scores</code> — the computed scoreboard</h3>
+<table>
+<thead><tr><th>Column</th><th>Meaning</th></tr></thead>
+<tbody>
+<tr><td><code>provider_id</code>, <code>task_type</code>, <code>segment</code></td><td>Primary key. A vendor has a <em>separate</em> score per task and per segment.</td></tr>
+<tr><td><code>total_attempts</code>, <code>total_matches</code>, <code>verified_hits</code>, <code>bounced</code></td><td>Raw counts in the rolling window, before smoothing.</td></tr>
+<tr><td><code>p95_latency_ms</code></td><td>95th-percentile latency over the last 100 attempts.</td></tr>
+<tr><td><code>ecpvh</code></td><td>Effective Cost Per Verified Hit.</td></tr>
+<tr><td><code>routing_score</code></td><td>The composite score used for ordering.</td></tr>
+<tr><td><code>updated_at</code></td><td>When this row was last recomputed (drives lazy recalc).</td></tr>
+</tbody>
+</table>
+
+<h3><code>enrichment_logs</code> — the immutable audit trail</h3>
+<p>Every external call is written here. This is the source of truth for learning and for reconciliation with invoices.</p>
+<table>
+<thead><tr><th>Column</th><th>Why it exists</th></tr></thead>
+<tbody>
+<tr><td><code>request_id</code></td><td>Trace one logical request across the waterfall.</td></tr>
+<tr><td><code>status_code</code>, <code>matched</code>, <code>verified</code></td><td>What happened: HTTP status, did data come back, did it pass verification.</td></tr>
+<tr><td><code>feedback</code></td><td><code>NULL</code>, <code>bounce</code>, or <code>reply</code> — written later by the feedback loop.</td></tr>
+<tr><td><code>cost_incurred</code>, <code>latency_ms</code></td><td>Economics and speed, per call.</td></tr>
+<tr><td><code>lookup_hash</code></td><td>Links a log row back to the cache key, so feedback can evict the right entry.</td></tr>
+<tr><td><code>result_value</code></td><td>The actual email/phone produced, so a bounce webhook can say "this exact value bounced, blame the vendor that returned it".</td></tr>
+<tr><td><code>created_at</code></td><td>Windowed aggregation and the p95 order.</td></tr>
+</tbody>
+</table>
+
+<h3><code>enrichment_cache</code> — the money saver</h3>
+<table>
+<thead><tr><th>Column</th><th>Meaning</th></tr></thead>
+<tbody>
+<tr><td><code>lookup_hash</code></td><td>Primary key: SHA-256 of task + normalized identity. One row per logical lookup.</td></tr>
+<tr><td><code>normalized_payload</code></td><td>The verified data (JSON), or <code>NULL</code> for a negative entry.</td></tr>
+<tr><td><code>source_provider</code></td><td>Which vendor produced the winning value.</td></tr>
+<tr><td><code>matched</code>, <code>verified</code></td><td>Distinguishes a positive hit from a negative "we looked and found nothing" entry.</td></tr>
+<tr><td><code>expires_at</code></td><td>TTL boundary. Positive rows live 30 days; negative rows 7 days.</td></tr>
+</tbody>
+</table>
+
+<div class="note card">
+<strong>Why negative caching.</strong> If a lead is genuinely unfindable, every repeated request would otherwise
+re-burn attempt credits and rate limits across all vendors. A short negative entry (7 days) stops the bleeding while
+still allowing new coverage to be discovered soon.
+</div>
+</section>
+
+<!-- ============================================================ -->
+<section id="math" class="anchor">
+<h2>6. The math, derived from scratch</h2>
+
+<p>Read this section top to bottom. Each concept builds on the previous one. All numbers match
+<code>evaluator.py</code> exactly; the worked examples use the real Hunter run.</p>
+
+<h3>6.1 The two rates every vendor has</h3>
+<p>For a given vendor, task, and segment, over a rolling <strong>30-day window</strong>, we count:</p>
+<ul>
+  <li><strong>attempts</strong> — how many times we called it;</li>
+  <li><strong>matches</strong> — how many calls returned any non-null data;</li>
+  <li><strong>verified hits</strong> — how many returned data that passed verification;</li>
+  <li><strong>bounces</strong> — how many of those values later hard-bounced in production.</li>
+</ul>
+
+<p><strong>Match rate</strong> answers "when I call, how often do I get <em>something</em>?"</p>
+<div class="eq">
+  <span class="label">Match rate (raw)</span>
+  MatchRate = <span class="frac"><span class="num">matches</span><span class="den">attempts</span></span>
+</div>
+
+<p><strong>Accuracy rate</strong> answers "when I get something, how often is it actually usable?"</p>
+<div class="eq">
+  <span class="label">Accuracy rate (raw)</span>
+  AccuracyRate = <span class="frac"><span class="num">verified&nbsp;hits</span><span class="den">matches</span></span>
+</div>
+
+<h3>6.2 The bounce penalty: a bounce is worse than a miss</h3>
+<p>A miss costs you a credit and nothing else. A <em>bounce</em> costs you a credit, wastes an email send, and damages
+your sender reputation, which lowers deliverability for <em>every future email</em>. So each bounce is penalized twice
+when computing the effective verified count:</p>
+<div class="eq">
+  <span class="label">Effective verified hits</span>
+  effective_verified = max( 0, verified_hits − 2 × bounced )
+</div>
+<p>The <code>max(0, …)</code> prevents a provider from going negative and keeps the arithmetic well-defined.</p>
+
+<h3>6.3 Bayesian smoothing: don't trust tiny samples</h3>
+<p>If a vendor has been called once and returned one verified email, its raw accuracy is 1.0 — "perfect". That is
+obviously not trustworthy. Bayesian smoothing injects a small number of <strong>imaginary prior observations</strong>
+so a vendor must earn its reputation with real volume.</p>
+
+<p>Our priors are chosen to mean: <em>"assume 4 matches in 10 attempts, and 3 verified among those 4 matches."</em></p>
+<div class="eq">
+  <span class="label">Smoothed rates</span>
+  MatchRate = <span class="frac"><span class="num">matches + 4</span><span class="den">attempts + 10</span></span>
+  &nbsp;&nbsp;&nbsp;
+  AccuracyRate = <span class="frac"><span class="num">effective_verified + 3</span><span class="den">matches + 4</span></span>
+</div>
+
+<details>
+<summary>Why this also happens to simplify beautifully</summary>
+<p>Multiply the two smoothed rates:</p>
+<div class="eq">
+  MatchRate × AccuracyRate =
+  <span class="frac"><span class="num">matches + 4</span><span class="den">attempts + 10</span></span>
+  ×
+  <span class="frac"><span class="num">effective_verified + 3</span><span class="den">matches + 4</span></span>
+  =
+  <span class="frac"><span class="num">effective_verified + 3</span><span class="den">attempts + 10</span></span>
+</div>
+<p>The <code>matches + 4</code> terms cancel. So the probability that a call yields a verified hit is effectively
+<code>(verified + 3) / (attempts + 10)</code> after smoothing — a single, stable fraction. This is why the priors also
+remove the zero-division problem: the denominator is never zero.</p>
+</details>
+
+<div class="warnbox card">
+<strong>Cold-start effect.</strong> An untested vendor (attempts = 0) gets the prior score: match 4/10 = 0.40, accuracy
+3/4 = 0.75. That is a reasonable "benefit of the doubt", but it means a vendor with one slow success can temporarily
+rank below completely untested vendors. This is visible in the real scorecard below, and is expected to settle as
+samples accumulate.
+</div>
+
+<h3>6.4 ECPVH — Effective Cost Per Verified Hit</h3>
+<p>This is the heart of the economics. We want "dollars per <em>working</em> data point", not "dollars per call".</p>
+
+<p>First, the expected cost of a single call. A call costs <code>cost_per_attempt</code> always, plus
+<code>cost_per_match</code> only if it matched. So:</p>
+<div class="eq">
+  <span class="label">Expected cost of one call</span>
+  E[cost per call] = C<sub>attempt</sub> + MatchRate × C<sub>match</sub>
+</div>
+
+<p>The probability that one call produces a verified hit is <code>MatchRate × AccuracyRate</code>. Cost per successful
+outcome is expected cost divided by success probability:</p>
+<div class="eq">
+  <span class="label">Effective Cost Per Verified Hit</span>
+  ECPVH =
+  <span class="frac">
+    <span class="num">C<sub>attempt</sub> + MatchRate × C<sub>match</sub></span>
+    <span class="den">MatchRate × AccuracyRate</span>
+  </span>
+</div>
+
+<p>Equivalently (and this is the intuition):</p>
+<div class="eq">
+  ECPVH =
+  <span class="frac"><span class="num">C<sub>attempt</sub></span><span class="den">MatchRate × AccuracyRate</span></span>
+  +
+  <span class="frac"><span class="num">C<sub>match</sub></span><span class="den">AccuracyRate</span></span>
+</div>
+<p>Read it as: "you pay the per-match price more often than necessary when accuracy is low, and you pay the attempt
+price more often when match rate is low."</p>
+
+<div class="card">
+<strong>Worked example — untested Hunter (C<sub>match</sub> = $0.02, C<sub>attempt</sub> = 0):</strong><br>
+MatchRate = 4/10 = 0.40 &nbsp;•&nbsp; AccuracyRate = 3/4 = 0.75 &nbsp;•&nbsp; product = 0.30<br>
+ECPVH = (0 + 0.40 × 0.02) / 0.30 = 0.008 / 0.30 = <strong>$0.0267 per verified hit</strong>.
+</div>
+
+<h3>6.5 The composite routing score</h3>
+<p>We want to rank on three things at once: <em>yield</em> (good), <em>cost</em> (bad), <em>latency</em> (bad). Each
+penalty is normalized by a maximum we are willing to tolerate, so the terms are dimensionless and comparable.</p>
+
+<div class="eq">
+  <span class="label">Composite routing score</span>
+  S = w<sub>1</sub> × ( MatchRate × AccuracyRate )
+  &nbsp;−&nbsp; w<sub>2</sub> ×
+  <span class="frac"><span class="num">ECPVH</span><span class="den">MaxAllowedCost</span></span>
+  &nbsp;−&nbsp; w<sub>3</sub> ×
+  <span class="frac"><span class="num">p95 latency</span><span class="den">MaxAllowedLatency</span></span>
+</div>
+
+<table>
+<thead><tr><th>Symbol</th><th>Value here</th><th>Interpretation</th></tr></thead>
+<tbody>
+<tr><td>w<sub>1</sub></td><td>1.0</td><td>Reward for yield = the smoothed probability of a verified hit.</td></tr>
+<tr><td>w<sub>2</sub></td><td>1.0</td><td>Weight of cost pressure (ECPVH relative to the $0.50 cap).</td></tr>
+<tr><td>w<sub>3</sub></td><td>0.5</td><td>Weight of latency pressure (p95 relative to the 5,000 ms cap). Halved because speed matters, but less than money and correctness.</td></tr>
+<tr><td>MaxAllowedCost</td><td>$0.50</td><td>The cost above which a vendor is considered expensive. Tune to your economics.</td></tr>
+<tr><td>MaxAllowedLatency</td><td>5,000 ms</td><td>The latency above which a vendor is considered slow.</td></tr>
+</tbody>
+</table>
+
+<p>The score is not a probability. It is a comparable utility: higher is better, and only the <em>order</em> matters
+for routing. That is why it may be small or negative; it is a ranking device.</p>
+
+<h3>6.6 Worked example — the real Hunter run</h3>
+<p>Real numbers after the first live call: attempts = 1, matches = 1, verified = 1, bounced = 0, p95 = 2,391 ms,
+C<sub>match</sub> = $0.02.</p>
+
+<table>
+<thead><tr><th>Step</th><th>Calculation</th><th>Result</th></tr></thead>
+<tbody>
+<tr><td>effective_verified</td><td>max(0, 1 − 2×0)</td><td>1</td></tr>
+<tr><td>MatchRate</td><td>(1 + 4) / (1 + 10)</td><td>5/11 = 0.4545</td></tr>
+<tr><td>AccuracyRate</td><td>(1 + 3) / (1 + 4)</td><td>4/5 = 0.8000</td></tr>
+<tr><td>yield</td><td>0.4545 × 0.8000</td><td>0.3636</td></tr>
+<tr><td>ECPVH</td><td>(0 + 0.4545 × 0.02) / 0.3636</td><td>0.0250</td></tr>
+<tr><td>reward term</td><td>1.0 × 0.3636</td><td>0.3636</td></tr>
+<tr><td>cost penalty</td><td>1.0 × 0.0250 / 0.50</td><td>0.0500</td></tr>
+<tr><td>latency penalty</td><td>0.5 × 2391 / 5000</td><td>0.2391</td></tr>
+<tr><td><strong>score</strong></td><td>0.3636 − 0.0500 − 0.2391</td><td><strong>0.0745</strong></td></tr>
+</tbody>
+</table>
+
+<p>Compare with an <em>untested</em> vendor at $0.03 per match (p95 defaults to 500 ms):</p>
+<table>
+<thead><tr><th>Step</th><th>Calculation</th><th>Result</th></tr></thead>
+<tbody>
+<tr><td>MatchRate / AccuracyRate</td><td>4/10 and 3/4</td><td>0.40 / 0.75</td></tr>
+<tr><td>yield</td><td>0.40 × 0.75</td><td>0.30</td></tr>
+<tr><td>ECPVH</td><td>(0 + 0.40 × 0.03) / 0.30</td><td>0.0400</td></tr>
+<tr><td>reward − cost − latency</td><td>0.30 − 0.08 − 0.05</td><td><strong>0.1700</strong></td></tr>
+</tbody>
+</table>
+
+<p>So the untested vendor ranks above Hunter after one slow call. With more Hunter samples its yield rises toward its
+true rate and its p95 stabilizes, and it will overtake. This is intentional conservatism: <em>one</em> data point should
+not dominate a ranking.</p>
+
+<h3>6.7 Cold-start floor: never rank a proven failure first</h3>
+<p>If a vendor has been tried (attempts &gt; 0) but has produced effectively zero verified hits, it gets a hard floor:</p>
+<div class="eq">
+  <span class="label">Cold-start guard</span>
+  if ( attempts &gt; 0 and effective_verified == 0 ) → S = −999.0
+</div>
+<p><code>−999</code> is not "ban". It sorts the vendor <em>last</em>, so it is still reachable at the bottom of the
+waterfall and by exploration, which is how it can recover. It simply never jumps the queue while it is failing.</p>
+
+<h3>6.8 Explore vs exploit: the multi-armed bandit</h3>
+<p>If we always pick the current best vendor, we never learn that a lower-ranked vendor quietly improved. That is the
+classic <strong>explore/exploit</strong> trade-off. We use <strong>epsilon-greedy</strong>:</p>
+<div class="eq">
+  <span class="label">Epsilon-greedy selection</span>
+  with probability 1 − ε = 95% → strict descending score (exploit)<br>
+  with probability ε = 5% → pick a random lower-ranked active vendor and promote it to slot 1 (explore)
+</div>
+<p>Only <em>slot 1</em> changes, and only among vendors already eligible (active, not cooling). The experiment costs at
+most one possibly-worse call and buys information that can move the whole ranking. Exploration is logged, so you can
+tell it apart from normal traffic.</p>
+
+<h3>6.9 p95 latency</h3>
+<p>We care about the <em>tail</em>: a vendor that is usually fast but occasionally hangs for ten seconds is a problem.
+p95 = the value below which 95% of observations fall. Over the last 100 attempts per scope:</p>
+<div class="eq">
+  <span class="label">95th percentile (no interpolation)</span>
+  vals = last 100 latency values, sorted ascending<br>
+  index = int(0.95 × len(vals)) , clamped to the last element<br>
+  p95 = vals[index] &nbsp;(default 500 ms if empty)
+</div>
+<p>Example: for latencies 1..100, <code>int(0.95×100) = 95</code>, and the 0-based element is 96. That matches the
+unit test.</p>
+
+<h3>6.10 Circuit breaker</h3>
+<p>A failing vendor should be given a rest, not hammered. We count <strong>consecutive</strong> transport failures
+(HTTP 429, any 5xx, timeouts, exceptions):</p>
+<ul>
+  <li>on each failure: <code>consecutive_failures += 1</code>;</li>
+  <li>at 3 consecutive: set <code>cooldown_until = now + 15 minutes</code>;</li>
+  <li>on any success (2xx): <code>consecutive_failures = 0</code>.</li>
+</ul>
+<p>While cooling down, the vendor is filtered out of <code>ranked_providers</code> entirely.</p>
+<div class="good card">
+<strong>Important distinction.</strong> A <em>clean miss</em> (HTTP 200, no data) is not a failure. A
+<em>missing API key</em> is not a failure either — it is skipped as <code>skipped_unconfigured</code>, with no bill, no
+breaker increment, and no negative cache. Only real transport problems trip the breaker.
+</div>
+
+<h3>6.11 Caching and TTL</h3>
+<p>The cache key is:</p>
+<div class="eq">
+  <span class="label">Cache key</span>
+  lookup_hash = SHA-256( task_type + "|" + normalized_identity )
+</div>
+<p>Normalization lowercases fields, strips <code>https://</code>, paths, and <code>www.</code> from domains, and picks a
+task-specific identity: email if present, else LinkedIn URL, else name+domain (for people); domain (for companies).</p>
+<table>
+<thead><tr><th>Kind</th><th>TTL</th><th>Why</th></tr></thead>
+<tbody>
+<tr><td>Positive (verified)</td><td>30 days</td><td>Verified emails are stable over a month; job changes are the main churn.</td></tr>
+<tr><td>Negative (clean miss)</td><td>7 days</td><td>Shorter, so newly-added coverage is discovered soon; long enough to stop re-burning credits.</td></tr>
+</tbody>
+</table>
+
+<h3>6.12 Budget gate</h3>
+<p>Before every vendor call, we check the worst case (assuming it matches):</p>
+<div class="eq">
+  <span class="label">Pre-attempt budget check</span>
+  spent_so_far + C<sub>attempt</sub> + C<sub>match</sub> ≤ max_budget
+</div>
+<p>If it would exceed, the vendor is skipped with status <code>skipped_budget</code>. Skipping for budget does
+<strong>not</strong> create a negative cache entry, because we never actually established that the data is unfindable.</p>
+
+<h3>6.13 Feedback: closing the loop with reality</h3>
+<p>Verification (MX) proves a domain can receive mail. It does not prove the mailbox exists. The only ground truth is
+what happens after you send. So a downstream bounce event is fed back in:</p>
+<ol>
+  <li>find the log row(s) whose <code>result_value</code> matches the bounced email (or by <code>request_id</code>);</li>
+  <li>set <code>feedback = 'bounce'</code> and <code>verified = 0</code>;</li>
+  <li>delete the matching cache entry so the bad email is never served again;</li>
+  <li>recompute scores; the bounce penalty reduces that vendor's effective verified count by 2, likely flooring it
+      to −999 until it proves itself again.</li>
+</ol>
+<p>This is what makes the system <em>actually</em> learn rather than just count.</p>
+
+<h3>6.14 Segments</h3>
+<p>Scores are per <code>(vendor, task, segment)</code>. A vendor can be excellent for <code>us_saas</code> and poor for
+<code>eu_enterprise</code>. Today the caller passes the segment (default <code>global</code>); later it can be derived
+from country/TLD/company size. Until a segment has data, its vendors share the prior score and tie-break by id.</p>
+
+<h3>6.15 Lazy recalculation</h3>
+<p>There is no always-on scheduler. Instead, after each logged attempt we check how many logs have appeared since
+<code>provider_scores.updated_at</code>; at 20 or more we recompute inline. You can also force it with
+<code>recalc</code>. This is cheap (a few aggregates over a 30-day window) and removes a class of "why didn't the score
+update" bugs.</p>
+</section>
+
+<!-- ============================================================ -->
+<section id="lifecycle" class="anchor">
+<h2>7. A request, step by step</h2>
+
+<p>This is the exact control flow in <code>router.enrich</code>.</p>
+
+<pre><code>INPUT: EnrichmentRequest(task_type, segment, names, domain, linkedin, email,
+                          max_cost_budget, request_id)
+
+1. Reject nothing silently — Pydantic validates the request.
+2. budget = request.max_cost_budget  OR  DEFAULT_MAX_BUDGET ($0.10)
+3. lookup_hash = SHA256(task_type | normalized_identity)
+4. IF cache row exists AND not expired:
+       return cached positive (data, source_provider) or cached negative
+5. Ensure score rows exist (recalc once if a provider is missing a score)
+6. rows = active providers for (task, segment), cooldown elapsed,
+          ORDER BY routing_score DESC
+7. IF len(rows) &gt; 1 AND random() &lt; 0.05:
+       promote a random lower-ranked provider to slot 1 (explore)
+8. FOR each provider in order:
+       a. IF spent + cost_attempt + cost_match &gt; budget:
+              trace "skipped_budget"; continue
+       b. adapter = registry[provider]; if none: trace "error"; continue
+       c. result = adapter.fetch(req)        # timed, exceptions caught
+       d. IF error_code is no_api_key/missing_inputs:
+              trace "skipped_unconfigured"; continue   # no bill, no failure
+       e. attempted += 1; spent += cost
+       f. IF transport error (429/5xx/timeout):
+              increment breaker; maybe cooldown; log; trace "error"; continue
+       g. reset breaker; IF not matched: log; trace "miss"; continue
+       h. verified = verifier.verify(task, value, payload)
+       i. log matched + verified + result_value
+       j. IF verified:
+              write positive cache; maybe recalc; RETURN success
+          ELSE continue (matched but unverified is not a win)
+9. IF attempted &gt; 0 AND no transport error AND no budget skip AND no match:
+       write negative cache (7 days)
+10. maybe recalc; RETURN failure with full trace</code></pre>
+
+<div class="note card">
+<strong>Why keep going after an unverified match?</strong> A vendor may return an address that passes syntax but has no
+MX. That is not a usable result. Trying the next vendor may produce a verifiable one. Note that a waterfall that
+<em>did</em> get a match but could not verify it does not write a negative cache — we did not prove the person is
+unfindable.
+</div>
+</section>
+
+<!-- ============================================================ -->
+<section id="verify" class="anchor">
+<h2>8. Verification logic</h2>
+
+<p>Verification is <strong>task-dispatched</strong>: the same "verified" word means different checks for different data.</p>
+
+<table>
+<thead><tr><th>Task</th><th>Check today</th><th>Why</th></tr></thead>
+<tbody>
+<tr><td><code>work_email</code></td><td>Regex syntax + DNS MX lookup (A-record fallback)</td><td>Cheap, local, and reliable. Raw SMTP probing on port 25 fails from most cloud/VPS IPs and gets blocked.</td></tr>
+<tr><td><code>mobile_phone</code></td><td>E.164 normalization, 7–15 digits</td><td>Catches truncation and formatting garbage without a paid carrier lookup.</td></tr>
+<tr><td><code>company_firmographics</code></td><td>Required keys non-empty: name, domain, and employee_count or industry</td><td>Ensures a returned company record is actually usable.</td></tr>
+</tbody>
+</table>
+
+<p class="muted">A paid HTTP verifier (MillionVerifier, ZeroBounce, etc.) can be added behind a config flag later
+without touching the router — the verifier is already a swappable function.</p>
+</section>
+
+<!-- ============================================================ -->
+<section id="providers" class="anchor">
+<h2>9. Providers and adapters</h2>
+
+<p>Each vendor is an isolated module implementing one interface. The base class guarantees the router never sees an
+exception.</p>
+
+<pre><code>class BaseProvider:
+    id: str
+    task_types: tuple[str, ...]
+
+    async def _fetch(self, req) -&gt; ProviderResult: ...   # vendor-specific
+
+    async def fetch(self, req) -&gt; ProviderResult:         # what router calls
+        start = perf_counter()
+        try:
+            result = await self._fetch(req)               # normalizes vendor JSON
+        except Exception as exc:
+            result = ProviderResult.error(f"exception:{type(exc).__name__}")
+        result.latency_ms = measured
+        return result</code></pre>
+
+<table>
+<thead><tr><th>Adapter</th><th>Task</th><th>Status</th></tr></thead>
+<tbody>
+<tr><td><code>hunter.py</code></td><td>work_email</td><td>Live and verified (key present, Starter plan).</td></tr>
+<tr><td><code>prospeo.py</code></td><td>work_email</td><td>Wired; skips cleanly until a key exists.</td></tr>
+<tr><td><code>findymail.py</code></td><td>work_email</td><td>Wired; skips cleanly until a key exists.</td></tr>
+<tr><td><code>apollo.py</code></td><td>work_email</td><td>Key present but Apollo's API is usually paid-gated; skips/errors cleanly.</td></tr>
+<tr><td><code>mock.py</code></td><td>all</td><td>Deterministic, no network, used by <code>--dry-run</code> and tests.</td></tr>
+</tbody>
+</table>
+
+<p>Adapters normalize raw vendor JSON into a single <code>ProviderResult</code> with <code>matched</code>,
+<code>value</code>, <code>data</code>, <code>status_code</code>, <code>error_code</code>, and <code>latency_ms</code>.
+That normalization is what lets the router treat every vendor identically.</p>
+</section>
+
+<!-- ============================================================ -->
+<section id="codemap" class="anchor">
+<h2>10. File-by-file code map</h2>
+
+<table class="files">
+<thead><tr><th>File</th><th>Responsibility</th></tr></thead>
+<tbody>
+<tr><td>engine.json</td><td>The contract Hermes reads: commands, costs, state path, secrets (names only), optional port.</td></tr>
+<tr><td>run.py</td><td>CLI dispatch, argument parsing, JSON output, run-artifact writing.</td></tr>
+<tr><td>config.py</td><td>Paths, secret loading from shared <code>.env</code>, all scoring constants, provider seeds.</td></tr>
+<tr><td>models.py</td><td>Pydantic v2 request/response/trace models; normalization and lookup hashing.</td></tr>
+<tr><td>db.py</td><td>SQLite connect (WAL), schema, cache helpers, provider health helpers.</td></tr>
+<tr><td>router.py</td><td>Cache check, ranking, explore, budget gate, adapter calls, breaker, logging, feedback ingest.</td></tr>
+<tr><td>verifier.py</td><td>Task-dispatched verification; DNS MX default; injectable for tests.</td></tr>
+<tr><td>evaluator.py</td><td>Smoothed rates, ECPVH, composite score, p95, recalc, lazy recalc, golden probe, scorecard.</td></tr>
+<tr><td>providers/base.py</td><td>ProviderResult, BaseProvider, registry of live adapters.</td></tr>
+<tr><td>providers/*.py</td><td>One adapter per vendor plus a deterministic mock.</td></tr>
+<tr><td>golden_dataset.json</td><td>Known-truth records for active benchmarking.</td></tr>
+<tr><td>tests/test_arbiter.py</td><td>11 deterministic tests, temp DB, scripted adapters, no network.</td></tr>
+<tr><td>docs/walkthrough.html</td><td>This document.</td></tr>
+<tr><td>state/arbiter.db</td><td>Local runtime state (gitignored).</td></tr>
+<tr><td>runs/</td><td>Per-run JSON artifacts: enrich, scorecard, golden-probe (gitignored).</td></tr>
+</tbody>
+</table>
+
+<details>
+<summary>Suggested reading order to understand the code</summary>
+<ol>
+  <li><code>engine.json</code> — the contract.</li>
+  <li><code>models.py</code> — what a request and a result look like.</li>
+  <li><code>db.py</code> — the four tables.</li>
+  <li><code>evaluator.py</code> — the math (start at <code>score()</code>).</li>
+  <li><code>router.py</code> — the lifecycle.</li>
+  <li><code>verifier.py</code> and <code>providers/base.py</code>.</li>
+  <li><code>run.py</code> — how commands map to the above.</li>
+</ol>
+</details>
+</section>
+
+<!-- ============================================================ -->
+<section id="done" class="anchor">
+<h2>11. What is done today</h2>
+
+<table>
+<thead><tr><th>Capability</th><th>State</th><th>Notes</th></tr></thead>
+<tbody>
+<tr><td>CLI engine with <code>engine.json</code></td><td><span class="tag done">done</span></td><td>Passes <code>engines.py check</code>; status <code>ready</code>.</td></tr>
+<tr><td>SQLite schema + WAL + 4 tables</td><td><span class="tag done">done</span></td><td>Composite keys, indexes, negative cache.</td></tr>
+<tr><td>Dynamic waterfall routing</td><td><span class="tag done">done</span></td><td>Ranked, budget-aware, stops at first verified hit.</td></tr>
+<tr><td>ECPVH + composite score + priors</td><td><span class="tag done">done</span></td><td>Matches worked examples exactly.</td></tr>
+<tr><td>Cold-start floor + zero-division guard</td><td><span class="tag done">done</span></td><td>Tested.</td></tr>
+<tr><td>Epsilon-greedy exploration (5%)</td><td><span class="tag done">done</span></td><td>Injectable RNG, disabled in tests.</td></tr>
+<tr><td>Circuit breaker (3 strikes, 15 min)</td><td><span class="tag done">done</span></td><td>Recovery after cooldown tested.</td></tr>
+<tr><td>Positive + negative cache with TTL</td><td><span class="tag done">done</span></td><td>30d / 7d.</td></tr>
+<tr><td>Task-dispatched verification</td><td><span class="tag done">done</span></td><td>Email syntax+MX, E.164, firmographics.</td></tr>
+<tr><td>Feedback / bounce attribution</td><td><span class="tag done">done</span></td><td>Evicts cache, penalizes vendor, tested.</td></tr>
+<tr><td>Lazy + manual recalc, scorecard</td><td><span class="tag done">done</span></td><td>Every 20 logs or on demand.</td></tr>
+<tr><td>Golden-dataset probe (gated)</td><td><span class="tag done">done</span></td><td>Requires <code>--yes</code> + <code>--max-budget</code>; report-only.</td></tr>
+<tr><td>Live Hunter adapter</td><td><span class="tag done">done</span></td><td>Real verified call + cache hit proven.</td></tr>
+<tr><td>Test suite</td><td><span class="tag done">done</span></td><td>11 tests, no network, no spend.</td></tr>
+</tbody>
+</table>
+</section>
+
+<!-- ============================================================ -->
+<section id="todo" class="anchor">
+<h2>12. What is not done yet (and honest limits)</h2>
+
+<table>
+<thead><tr><th>Gap</th><th>State</th><th>Detail</th></tr></thead>
+<tbody>
+<tr><td>HTTP API (<code>/v1/enrich</code>, <code>/v1/scorecard</code>, <code>/v1/feedback</code>)</td><td><span class="tag todo">todo</span></td><td>Phase 3. <code>serve</code> is a stub; no FastAPI dependency yet.</td></tr>
+<tr><td>More live vendors</td><td><span class="tag part">partial</span></td><td>Prospeo/Findymail/Apollo adapters exist but need keys; Tomba/Snov/Enrow/PDL not wired.</td></tr>
+<tr><td>Rate limiting (<code>max_rps</code>)</td><td><span class="tag todo">todo</span></td><td>Declared per vendor, not enforced. No token bucket.</td></tr>
+<tr><td>Retries with backoff + jitter</td><td><span class="tag todo">todo</span></td><td>A single 5xx is treated as failure immediately.</td></tr>
+<tr><td>Paid verifier option</td><td><span class="tag todo">todo</span></td><td>Interface is swappable; adapter not written.</td></tr>
+<tr><td>Real golden truths</td><td><span class="tag todo">todo</span></td><td>Dataset has placeholders (<code>truth: null</code>) to fill from known-correct records.</td></tr>
+<tr><td>External scheduling</td><td><span class="tag todo">todo</span></td><td>No APScheduler by design; cron/Task Scheduler should call <code>recalc</code>/<code>golden-probe</code>.</td></tr>
+<tr><td>Cost calibration to invoices</td><td><span class="tag todo">todo</span></td><td><code>cost_per_match</code> are estimates; reconcile with real billing.</td></tr>
+<tr><td>Concurrency / locking</td><td><span class="tag part">partial</span></td><td>SQLite is single-writer; no batch concurrency control yet.</td></tr>
+<tr><td>Auth / access control</td><td><span class="tag todo">todo</span></td><td>Local CLI; the future API will need at least a shared token.</td></tr>
+<tr><td>PII retention policy</td><td><span class="tag todo">todo</span></td><td><code>result_value</code> stores emails locally; no auto-purge yet.</td></tr>
+<tr><td>Observability</td><td><span class="tag todo">todo</span></td><td>No metrics/export; logs are the only signal.</td></tr>
+<tr><td>Migratable schema</td><td><span class="tag todo">todo</span></td><td><code>CREATE IF NOT EXISTS</code> only; no versioned migrations.</td></tr>
+<tr><td>Phone and firmographics live adapters</td><td><span class="tag todo">todo</span></td><td>Verification logic exists; no vendor adapters for those tasks yet.</td></tr>
+</tbody>
+</table>
+
+<div class="warnbox card">
+<strong>Known mathematical caveats.</strong>
+<ul>
+  <li>Small samples dominate: a single slow success can rank below untested vendors (observed with Hunter). Priors are
+      conservative on purpose; a minimum-sample gate is a possible tuning knob.</li>
+  <li>MX only proves the domain accepts mail; it does not prove the mailbox exists. Only feedback closes that gap.</li>
+  <li>Latency is measured client-side, so it includes our own network, not just vendor service time.</li>
+  <li>Costs are configured estimates, not invoice truth.</li>
+  <li>Weights and priors are judgment calls; they should be tuned against real business outcomes.</li>
+</ul>
+</div>
+</section>
+
+<!-- ============================================================ -->
+<section id="roadmap" class="anchor">
+<h2>13. What it can become after later phases</h2>
+
+<h3>Phase 3 — HTTP service</h3>
+<ul>
+  <li><code>POST /v1/enrich</code>, <code>GET /v1/scorecard</code>, <code>POST /v1/feedback</code> on
+      <code>127.0.0.1:8790</code> (the port is already declared, optional).</li>
+  <li>A webhook endpoint your outreach tool calls on bounce/reply, replacing the manual <code>feedback</code> command.</li>
+  <li>A tiny dashboard over the scorecard: which vendor is winning, by segment, at what cost.</li>
+</ul>
+
+<h3>Phase 4 — deeper intelligence</h3>
+<ul>
+  <li><strong>Batch/portfolio routing:</strong> decide over a whole list, not one record — a knapsack that spends a
+      fixed budget maximizing expected verified hits.</li>
+  <li><strong>Better bandits:</strong> Thompson sampling or UCB instead of fixed epsilon, for faster learning with less
+      waste.</li>
+  <li><strong>Consensus and confidence:</strong> when two vendors agree, raise confidence; when they disagree, route to
+      a verifier.</li>
+  <li><strong>Auto-segmentation:</strong> derive <code>segment</code> from country/TLD/headcount instead of trusting the
+      caller.</li>
+  <li><strong>Adaptive TTLs:</strong> learn how long each vendor's data stays good and set TTL per vendor/segment.</li>
+  <li><strong>Spend forecasting and alerts:</strong> project monthly cost, warn on anomalies, reconcile invoices.</li>
+  <li><strong>Vendor SLA monitoring:</strong> the same logs double as an uptime/quality monitor per vendor.</li>
+  <li><strong>Multi-task routing:</strong> phone and firmographics with their own vendors and verifiers.</li>
+  <li><strong>Human-in-the-loop review:</strong> queue low-confidence values for manual checks.</li>
+</ul>
+
+<h3>What it could optimize end to end</h3>
+<p>Not just "get an email" but "get the <em>cheapest set of verified contacts that maximizes reply rate</em>", using
+feedback from real replies — turning a data tool into a revenue-yield optimizer.</p>
+</section>
+
+<!-- ============================================================ -->
+<section id="clay" class="anchor">
+<h2>14. Compared with Clay waterfall enrichment</h2>
+
+<p><strong>Clay</strong> is a popular GTM data platform. Among many features it offers <strong>waterfall
+enrichment</strong>: for each row it tries one provider, then the next, until a field is filled, plus AI research and a
+large library of integrations. The comparison below is conceptual; Clay's exact features and packaging evolve, so treat
+specifics as illustrative rather than contractual.</p>
+
+<table>
+<thead><tr><th>Dimension</th><th>enrichment-arbiter (this engine)</th><th>Clay-style waterfall</th></tr></thead>
+<tbody>
+<tr><td>Form factor</td><td>Self-hosted CLI engine in this repo; JSON in/out; local SQLite.</td><td>Hosted collaborative SaaS / spreadsheet-like UI with templates and automations.</td></tr>
+<tr><td>Who operates it</td><td>An engineer or agent; versioned in git.</td><td>RevOps / GTM operators, largely no-code.</td></tr>
+<tr><td>Breadth</td><td>Narrow and deep: person/company enrichment routing only.</td><td>Broad: enrichment, scraping, AI research, CRM sync, sequencing, 100+ integrations.</td></tr>
+<tr><td>Waterfall order</td><td><strong>Learned</strong> from live outcomes; per task and segment; re-ranked continuously.</td><td>Configured by the user (ordered provider list) per column/template; can be copied and tweaked.</td></tr>
+<tr><td>Cost awareness</td><td>First-class: ECPVH, per-call budget gates, negative cache to avoid re-spend.</td><td>Credit-based; users manage credits and provider order manually.</td></tr>
+<tr><td>Verification</td><td>Built-in gate per task (MX now, paid verifier pluggable) <em>before</em> accepting a value.</td><td>Provider-dependent; verification is usually a separate step or provider.</td></tr>
+<tr><td>Learning from bounces</td><td><strong>Yes</strong>: bounce webhook penalizes the responsible vendor and evicts cache.</td><td>Generally manual reconfiguration; not an automatic per-vendor penalty loop.</td></tr>
+<tr><td>Data ownership / privacy</td><td>Full: data and keys stay local.</td><td>Data flows through the vendor's cloud platform.</td></tr>
+<tr><td>Extensibility</td><td>Add a Python adapter; own the code.</td><td>Add an integration/template; limited to platform surface.</td></tr>
+<tr><td>Time to value</td><td>Higher: needs keys, config, and comfort with CLI.</td><td>Low: sign up, pick template, run.</td></tr>
+<tr><td>Auditability</td><td>Every call is logged with cost, latency, verification, feedback.</td><td>Platform-dependent activity logs; less control over raw events.</td></tr>
+<tr><td>Best fit</td><td>Teams that want control, cost optimization, and a programmable routing policy.</td><td>Teams that want broad GTM automation quickly without engineering.</td></tr>
+</tbody>
+</table>
+
+<div class="note card">
+<strong>Complementary, not either/or.</strong> A realistic setup may use Clay for broad enrichment and workflow, and
+this engine where you need strict cost control, a learned vendor ranking, and bounce-driven accuracy — or you feed this
+engine's verified output into Clay. The key architectural difference is that this engine treats <em>vendor selection
+itself</em> as a learned, auditable optimization problem.
+</div>
+</section>
+
+<!-- ============================================================ -->
+<section id="business" class="anchor">
+<h2>15. How this helps a company</h2>
+
+<table>
+<thead><tr><th>Business lever</th><th>Mechanism</th></tr></thead>
+<tbody>
+<tr><td>Lower cost per usable contact</td><td>ECPVH ranking + budget gates + negative cache mean you stop paying for duplicates and for vendors that rarely deliver.</td></tr>
+<tr><td>Higher deliverability</td><td>Verify before accepting; penalize bounces; evict bad emails from cache. Fewer bounces protects sender reputation.</td></tr>
+<tr><td>Better coverage</td><td>A waterfall across vendors plus exploration finds contacts no single vendor has.</td></tr>
+<tr><td>Vendor negotiation leverage</td><td>Hard numbers per vendor, per segment: match rate, accuracy, cost, latency.</td></tr>
+<tr><td>Risk diversification</td><td>If one vendor degrades or raises prices, the ranking shifts automatically; the breaker isolates outages.</td></tr>
+<tr><td>Predictable spend</td><td>Per-call budgets and logged costs make spend forecastable and auditable.</td></tr>
+<tr><td>Faster iteration</td><td>Add a vendor as a Python file; the math and routing apply immediately.</td></tr>
+<tr><td>Privacy and compliance</td><td>Self-hosted; keys and PII stay in your environment.</td></tr>
+<tr><td>SDR productivity</td><td>Fewer dead addresses and more verified contacts per hour of outreach.</td></tr>
+<tr><td>Decision quality</td><td>The scorecard answers "who is actually best for our ICP, and at what price?" with evidence.</td></tr>
+</tbody>
+</table>
+
+<p>In short: it converts "buy data and hope" into "route data by measured economics", which usually shows up as a
+lower cost per booked meeting and a healthier email domain.</p>
+</section>
+
+<!-- ============================================================ -->
+<section id="howto" class="anchor">
+<h2>16. How to run it, command by command</h2>
+
+<p>All commands are invoked through the shared runner from the workspace root.</p>
+
+<pre><code># 1. Create the database and seed providers (free)
+.venv\Scripts\python.exe scripts\engines.py run enrichment-arbiter init
+
+# 2. Check dependencies, secrets, and db
+.venv\Scripts\python.exe scripts\engines.py run enrichment-arbiter doctor
+
+# 3. See counts and the current scoreboard
+.venv\Scripts\python.exe scripts\engines.py run enrichment-arbiter status
+
+# 4. Add or update a vendor (example)
+.venv\Scripts\python.exe scripts\engines.py run enrichment-arbiter provider add `
+  --id hunter --task work_email --cost-match 0.02 --max-rps 5
+
+# 5. Real enrich, with a hard dollar cap
+.venv\Scripts\python.exe scripts\engines.py run enrichment-arbiter enrich `
+  --task work_email --first-name Ada --last-name Lovelace `
+  --domain acme.com --max-budget 0.10
+
+# 6. No-spend rehearsal
+.venv\Scripts\python.exe scripts\engines.py run enrichment-arbiter enrich `
+  --dry-run --task work_email --first-name Ada --last-name Lovelace `
+  --domain acme.com --max-budget 0.10
+
+# 7. Rankings, rates, ECPVH
+.venv\Scripts\python.exe scripts\engines.py run enrichment-arbiter scorecard --task work_email
+
+# 8. Force a score recompute
+.venv\Scripts\python.exe scripts\engines.py run enrichment-arbiter recalc
+
+# 9. Feed back a bounce (webhook equivalent)
+.venv\Scripts\python.exe scripts\engines.py run enrichment-arbiter feedback `
+  --email someone@acme.com --event bounce
+
+# 10. Active benchmark (spends; requires both flags)
+.venv\Scripts\python.exe scripts\engines.py run enrichment-arbiter golden-probe `
+  --yes --max-budget 0.50</code></pre>
+
+<p class="muted">Every command prints one JSON object to stdout; errors go to stderr with a non-zero exit. Run
+artifacts are written under <code>runs/</code>.</p>
+</section>
+
+<!-- ============================================================ -->
+<section id="appendix" class="anchor">
+<h2>17. Appendix</h2>
+
+<h3>A. All tunable constants</h3>
+<table>
+<thead><tr><th>Constant</th><th>Value</th><th>Effect</th></tr></thead>
+<tbody>
+<tr><td><code>W1 / W2 / W3</code></td><td>1.0 / 1.0 / 0.5</td><td>Weights of yield, cost, latency in the score.</td></tr>
+<tr><td><code>MAX_ALLOWED_COST</code></td><td>0.50</td><td>Normalizer for ECPVH.</td></tr>
+<tr><td><code>MAX_ALLOWED_LATENCY_MS</code></td><td>5000</td><td>Normalizer for p95.</td></tr>
+<tr><td><code>PRIOR_ATTEMPTS / MATCHES / VERIFIED</code></td><td>10 / 4 / 3</td><td>Bayesian smoothing priors.</td></tr>
+<tr><td><code>BOUNCE_PENALTY_WEIGHT</code></td><td>2.0</td><td>Each bounce subtracts two from effective verified.</td></tr>
+<tr><td><code>EPSILON</code></td><td>0.05</td><td>Exploration probability.</td></tr>
+<tr><td><code>RECALC_EVERY_N_LOGS</code></td><td>20</td><td>Lazy recalc threshold.</td></tr>
+<tr><td><code>POSITIVE_TTL_DAYS / NEGATIVE_TTL_DAYS</code></td><td>30 / 7</td><td>Cache lifetimes.</td></tr>
+<tr><td><code>SCORE_WINDOW_DAYS</code></td><td>30</td><td>Rolling window for aggregates.</td></tr>
+<tr><td><code>CIRCUIT_BREAKER_THRESHOLD / COOLDOWN_MINUTES</code></td><td>3 / 15</td><td>Breaker policy.</td></tr>
+<tr><td><code>P95_WINDOW</code></td><td>100</td><td>Latency sample size.</td></tr>
+<tr><td><code>COLD_START_FLOOR</code></td><td>−999.0</td><td>Floor for proven-failure vendors.</td></tr>
+<tr><td><code>DEFAULT_MAX_BUDGET</code></td><td>0.10</td><td>Per-call cap when the caller omits one.</td></tr>
+</tbody>
+</table>
+
+<h3>B. Real output from the verified live run</h3>
+<pre><code>{
+  "ok": true,
+  "dry_run": false,
+  "success": true,
+  "data": { "email": "[redacted]", "confidence": null, "sources": [] },
+  "provider_used": "hunter",
+  "waterfall_trace": [
+    { "provider_id": "hunter", "status": "verified", "matched": true,
+      "verified": true, "latency_ms": 2391, "cost": 0.02, "explore": false }
+  ],
+  "total_cost": 0.02,
+  "cached": false
+}</code></pre>
+<p>Immediately repeated, the same lookup returned:</p>
+<pre><code>{
+  "success": true, "provider_used": "hunter", "total_cost": 0.0,
+  "cached": true,
+  "waterfall_trace": [
+    { "provider_id": "hunter", "status": "cache_hit", "matched": true,
+      "verified": true, "latency_ms": 0, "cost": 0.0 }
+  ]
+}</code></pre>
+
+<h3>C. One-line summary of each module</h3>
+<ul>
+  <li><strong>config</strong> — every knob and where secrets come from.</li>
+  <li><strong>models</strong> — the shape of a request, a result, and a trace.</li>
+  <li><strong>db</strong> — the four tables and their helpers.</li>
+  <li><strong>evaluator</strong> — the math and the benchmark.</li>
+  <li><strong>router</strong> — the decision engine.</li>
+  <li><strong>verifier</strong> — is this value actually usable?</li>
+  <li><strong>providers</strong> — how to talk to each vendor, safely.</li>
+  <li><strong>run</strong> — the command surface.</li>
+</ul>
+
+<div class="good card">
+<strong>The one-sentence version.</strong> Buy data by the verified outcome, not by the call: rank vendors on measured
+cost-per-working-data-point, verify before trusting, cap the spend, and let real bounces retrain the ranking.
+</div>
+</section>
+
+</main>
+
+<footer>
+  enrichment-arbiter — internal walkthrough. Generated for the hermes-dola workspace.
+  Status: ready. Tests: 11 passing. Served locally; no external assets.
+</footer>
+
+</body>
+</html>

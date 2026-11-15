@@ -1,0 +1,14 @@
+.venv/
+venv/
+state/
+runs/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.env
+.env.*
+.dev.vars
+.idea/
+.vscode/
+.wrangler/
+node_modules/
