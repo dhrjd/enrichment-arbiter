@@ -1,4 +1,4 @@
-# Using enrichment-arbiter
+﻿# Using enrichment-arbiter
 
 This is the operator guide. It assumes you have cloned the repo and want to run it against real
 vendors, or extend it. For the internals and the math derivations, read
@@ -158,11 +158,11 @@ python run.py enrich --json request.json --max-budget 0.10
 ```json
 {
   "success": true,
-  "data": { "email": "…@acme.com" },
+  "data": { "email": "â€¦@acme.com" },
   "provider_used": "hunter",
   "waterfall_trace": [
     { "provider_id": "hunter", "status": "verified", "matched": true,
-      "verified": true, "latency_ms": 2391, "cost": 0.02, "explore": false }
+      "verified": true, "latency_ms": 1840, "cost": 0.02, "explore": false }
   ],
   "total_cost": 0.02,
   "cached": false,
@@ -359,7 +359,7 @@ class YourVendorProvider(BaseProvider):
 
 Then:
 
-1. Register it in `providers/base.py` → `get_registry()`.
+1. Register it in `providers/base.py` â†’ `get_registry()`.
 2. Add the seed/cost row in `config.py` (`PROVIDER_SEEDS`) or via `provider add`.
 3. Add the key name to the docs and to `engine.json`'s `secrets` list if you use that runner.
 4. Write a test with a scripted response; the adapter must never raise.
@@ -409,3 +409,4 @@ volume.
 
 **Where is the data stored?** `state/arbiter.db`. Back it up by copying the file while the engine is
 idle.
+

@@ -92,10 +92,10 @@
     <p>A complete walkthrough: what it is, every piece of the math, the logic behind each decision, what is built,
        what is pending, and how it compares to commercial waterfall tools such as Clay.</p>
     <div>
-      <span class="pill">Engine: <strong>ready</strong></span>
+      <span class="pill">Engine: <strong>built</strong></span>
       <span class="pill">Kind: pipeline (CLI-first)</span>
       <span class="pill">11 tests passing</span>
-      <span class="pill">Live Hunter run verified</span>
+      <span class="pill">11 offline tests</span>
     </div>
   </div>
 </header>
@@ -152,10 +152,10 @@ them and paying everyone, the engine:</p>
 expected dollars you must spend to walk away with one <em>verified, working</em> data point. Vendors are ordered by a
 <strong>composite routing score</strong> that rewards yield and penalizes both cost and latency.</p>
 
-<div class="card good">
-<strong>Proven on real data.</strong> A live run asked Hunter for a person at <code>stripe.com</code> and got back an
-MX-verified address in 2,391&nbsp;ms for about $0.02. The same lookup run a second time was served from cache at
-<strong>$0.00</strong> with no API call.
+<div class="card warnbox">
+<strong>Built, not yet run.</strong> The engine, the schema, the adapters and the tests exist. It has not been run
+against live vendors yet, so no outcome metrics are claimed here — only architecture and the behavior the tests pin
+down.
 </div>
 
 <p>It is deliberately <strong>not</strong> a cloud SaaS. It is a CLI-first engine that lives in this repo, keeps its
@@ -211,7 +211,7 @@ invokes every other engine in this workspace.</p>
 <tr><td><strong>Circuit breaker</strong></td><td>—</td><td>Temporarily stop calling a failing vendor instead of repeatedly hitting it.</td></tr>
 <tr><td><strong>Prior / Bayesian smoothing</strong></td><td>—</td><td>Starting assumptions added to real counts so small samples don't swing wildly.</td></tr>
 <tr><td><strong>ASGI / REST</strong></td><td>Async Server Gateway Interface / Representational State Transfer</td><td>Concepts for the phase-3 HTTP API we have not built yet.</td></tr>
-<tr><td><strong>WIP</strong></td><td>Work In Progress</td><td>Engine status while unfinished. This one is now <strong>ready</strong>.</td></tr>
+<tr><td><strong>WIP</strong></td><td>Work In Progress</td><td>Engine status while unfinished. This one is <strong>built but not yet run</strong>.</td></tr>
 </tbody>
 </table>
 </section>
@@ -513,7 +513,7 @@ penalty is normalized by a maximum we are willing to tolerate, so the terms are 
 for routing. That is why it may be small or negative; it is a ranking device.</p>
 
 <h3>6.6 Worked example — the real Hunter run</h3>
-<p>Real numbers after the first live call: attempts = 1, matches = 1, verified = 1, bounced = 0, p95 = 2,391 ms,
+<p>Illustrative numbers for one vendor: attempts = 1, matches = 1, verified = 1, bounced = 0, p95 = 2,391 ms,
 C<sub>match</sub> = $0.02.</p>
 
 <table>
@@ -793,7 +793,7 @@ That normalization is what lets the router treat every vendor identically.</p>
 <table>
 <thead><tr><th>Capability</th><th>State</th><th>Notes</th></tr></thead>
 <tbody>
-<tr><td>CLI engine with <code>engine.json</code></td><td><span class="tag done">done</span></td><td>Passes <code>engines.py check</code>; status <code>ready</code>.</td></tr>
+<tr><td>CLI engine with <code>engine.json</code></td><td><span class="tag done">done</span></td><td>Passes <code>engines.py check</code>; status <code>wip</code> until a live run.</td></tr>
 <tr><td>SQLite schema + WAL + 4 tables</td><td><span class="tag done">done</span></td><td>Composite keys, indexes, negative cache.</td></tr>
 <tr><td>Dynamic waterfall routing</td><td><span class="tag done">done</span></td><td>Ranked, budget-aware, stops at first verified hit.</td></tr>
 <tr><td>ECPVH + composite score + priors</td><td><span class="tag done">done</span></td><td>Matches worked examples exactly.</td></tr>
@@ -805,7 +805,7 @@ That normalization is what lets the router treat every vendor identically.</p>
 <tr><td>Feedback / bounce attribution</td><td><span class="tag done">done</span></td><td>Evicts cache, penalizes vendor, tested.</td></tr>
 <tr><td>Lazy + manual recalc, scorecard</td><td><span class="tag done">done</span></td><td>Every 20 logs or on demand.</td></tr>
 <tr><td>Golden-dataset probe (gated)</td><td><span class="tag done">done</span></td><td>Requires <code>--yes</code> + <code>--max-budget</code>; report-only.</td></tr>
-<tr><td>Live Hunter adapter</td><td><span class="tag done">done</span></td><td>Real verified call + cache hit proven.</td></tr>
+<tr><td>Vendor adapters</td><td><span class="tag done">done</span></td><td>Hunter, Prospeo, Findymail and Apollo are implemented; they require keys at runtime.</td></tr>
 <tr><td>Test suite</td><td><span class="tag done">done</span></td><td>11 tests, no network, no spend.</td></tr>
 </tbody>
 </table>
@@ -1012,7 +1012,7 @@ artifacts are written under <code>runs/</code>.</p>
 </tbody>
 </table>
 
-<h3>B. Real output from the verified live run</h3>
+<h3>B. Illustrative output shape</h3>
 <pre><code>{
   "ok": true,
   "dry_run": false,
@@ -1026,15 +1026,7 @@ artifacts are written under <code>runs/</code>.</p>
   "total_cost": 0.02,
   "cached": false
 }</code></pre>
-<p>Immediately repeated, the same lookup returned:</p>
-<pre><code>{
-  "success": true, "provider_used": "hunter", "total_cost": 0.0,
-  "cached": true,
-  "waterfall_trace": [
-    { "provider_id": "hunter", "status": "cache_hit", "matched": true,
-      "verified": true, "latency_ms": 0, "cost": 0.0 }
-  ]
-}</code></pre>
+<p>this is the shape of the response, not a recorded run.</p>
 
 <h3>C. One-line summary of each module</h3>
 <ul>
@@ -1058,7 +1050,7 @@ cost-per-working-data-point, verify before trusting, cap the spend, and let real
 
 <footer>
   enrichment-arbiter — internal walkthrough. Generated for the hermes-dola workspace.
-  Status: ready. Tests: 11 passing. Served locally; no external assets.
+  Status: built, not yet run. Tests: 11 passing. Served locally; no external assets.
 </footer>
 
 </body>

@@ -1,22 +1,24 @@
-# enrichment-arbiter
+﻿# enrichment-arbiter
 
 **Buy the verified hit, not the call.** A self-hosted, cost-optimizing router that decides which data
-vendor to ask for a work email, phone number, or company record — and learns from what actually works.
+vendor to ask for a work email, phone number, or company record â€” and learns from what actually works.
 
 [![Python](https://img.shields.io/badge/python-3.11%2B-3776ab)](https://www.python.org/)
 [![Tests](https://img.shields.io/badge/tests-11%20passing-0f9d76)](#testing)
-[![Status](https://img.shields.io/badge/status-ready-0f9d76)](#status)
+[![Status](https://img.shields.io/badge/status-built%20not%20run-6b7280)](#status)
 [![License](https://img.shields.io/badge/license-source--available-6b7280)](#license)
 
 - CLI-first engine, JSON on stdout, SQLite state, no daemon.
-- Dynamic waterfall: cache → rank → budget → call → verify → log → learn.
+- Dynamic waterfall: cache â†’ rank â†’ budget â†’ call â†’ verify â†’ log â†’ learn.
 - Ranks vendors by **Effective Cost Per Verified Hit (ECPVH)**, not by raw match rate.
 - Verifies results before accepting them (email syntax + DNS MX today; pluggable paid verifier).
 - Learns from production outcomes and downstream bounces.
 - Ships adapters for Hunter, Prospeo, Findymail, and Apollo, plus a deterministic mock.
 
-> This repo is the engine. The numbers in the examples come from a real Hunter run; the address is
-> redacted. No customer data, credentials, or private run data is included.
+> This repo is the engine. It is built and tested offline; it has not been run against live
+> vendors yet. No customer data, credentials, or outcome metrics are included.
+>
+> Portfolio walkthrough: <https://dheerajdola.pages.dev/projects/enrichment-arbiter/>
 
 ---
 
@@ -49,7 +51,7 @@ all waste something:
 |---|---|
 | Always call vendor A | Overpays; capped by one vendor's coverage |
 | Call every vendor and merge | Pays everyone for every record |
-| Fixed waterfall A → B → C | Order never adapts when a vendor improves or degrades |
+| Fixed waterfall A â†’ B â†’ C | Order never adapts when a vendor improves or degrades |
 
 `enrichment-arbiter` treats vendor selection as a learned, auditable optimization problem: **minimize
 dollars per verified data point, per task and per segment**, while staying fail-safe.
@@ -58,23 +60,23 @@ dollars per verified data point, per task and per segment**, while staying fail-
 
 ```
 request
-  │
-  ├─ cache hit? ── yes ──▶ return (positive or negative), $0.00
-  │
-  ▼
+  â”‚
+  â”œâ”€ cache hit? â”€â”€ yes â”€â”€â–¶ return (positive or negative), $0.00
+  â”‚
+  â–¼
 rank active vendors for (task, segment) by routing_score
-  │
-  ├─ 5% exploration: promote a random lower-ranked vendor to #1
-  ▼
+  â”‚
+  â”œâ”€ 5% exploration: promote a random lower-ranked vendor to #1
+  â–¼
 for each vendor (cheapest-best first):
-  ├─ budget gate: spent + cost_attempt + cost_match <= max_budget ?
-  ├─ call adapter (timed, exceptions contained)
-  ├─ transport error? → circuit breaker, log, continue
-  ├─ no data?        → log, continue
-  ├─ data returned?  → verify
-  │     ├─ verified → cache, log, STOP
-  │     └─ not verified → log, continue
-  ▼
+  â”œâ”€ budget gate: spent + cost_attempt + cost_match <= max_budget ?
+  â”œâ”€ call adapter (timed, exceptions contained)
+  â”œâ”€ transport error? â†’ circuit breaker, log, continue
+  â”œâ”€ no data?        â†’ log, continue
+  â”œâ”€ data returned?  â†’ verify
+  â”‚     â”œâ”€ verified â†’ cache, log, STOP
+  â”‚     â””â”€ not verified â†’ log, continue
+  â–¼
 exhausted: if every attempt was a clean miss, write a short negative cache entry
 ```
 
@@ -193,7 +195,7 @@ Run `python run.py --help` or `python run.py <command> --help` for every flag.
       "status": "verified",
       "matched": true,
       "verified": true,
-      "latency_ms": 2391,
+      "latency_ms": 1840,
       "cost": 0.02,
       "explore": false
     }
@@ -232,11 +234,11 @@ breaker, bounce feedback, cold-start/zero-division math, and the golden-probe ga
 
 ## Documentation
 
-- [`docs/USAGE.md`](docs/USAGE.md) — detailed operator guide: every command, flags, JSON input, cache
+- [`docs/USAGE.md`](docs/USAGE.md) â€” detailed operator guide: every command, flags, JSON input, cache
   behavior, feedback integration, troubleshooting, and how to add a provider.
-- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — data model, full scoring derivations, lifecycle,
+- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) â€” data model, full scoring derivations, lifecycle,
   failure taxonomy, extension points, and design limits.
-- [`docs/walkthrough.html`](docs/walkthrough.html) — a self-contained visual walkthrough (open in a
+- [`docs/walkthrough.html`](docs/walkthrough.html) â€” a self-contained visual walkthrough (open in a
   browser; no external assets).
 
 ## Compared with Clay-style waterfalls
@@ -277,7 +279,8 @@ cost control, a learned vendor order, and bounce-driven accuracy.
 
 ## Status
 
-`ready` for single-lead use after a real, verified vendor run. The HTTP layer is not built yet.
+Built and tested offline. It has **not** been run against live vendors yet, so no outcome
+metrics are claimed. The HTTP layer is not built yet.
 
 ## License
 
@@ -288,3 +291,4 @@ redistributing or using commercially.
 
 Built by [Dheeraj](https://github.com/dhrjd). Product decisions, scoring policy, and safety rules are
 human; much of the implementation was done with coding agents.
+

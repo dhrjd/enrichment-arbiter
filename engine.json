@@ -1,8 +1,8 @@
-{
+﻿{
   "name": "enrichment-arbiter",
   "version": "0.1.0",
   "description": "Cost-optimizing data-provider evaluation and dynamic waterfall routing for person/company enrichment.",
-  "status": "ready",
+  "status": "wip",
   "kind": "pipeline",
   "entry": ["{python}", "run.py"],
   "cwd": ".",
@@ -45,3 +45,4 @@
   "inputs": "lead fields via CLI flags or a JSON request; never modified",
   "docs": "README.md"
 }
+

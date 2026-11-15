@@ -1,4 +1,4 @@
-# Architecture
+﻿# Architecture
 
 This document explains how `enrichment-arbiter` is built and why. For step-by-step usage, see
 [`USAGE.md`](USAGE.md); for a visual version, open [`walkthrough.html`](walkthrough.html).
@@ -45,18 +45,18 @@ tests/            11 deterministic tests, temp DB, no network
 
 ```
 EnrichmentRequest
-  → lookup_hash = SHA256(task | normalized identity)
-  → cache lookup (positive or negative, TTL-bound)
-  → ranked_providers(task, segment)
-  → optional epsilon-greedy promotion
-  → for each provider: budget gate → adapter → classify outcome
-      → transport error: breaker + log + continue
-      → unconfigured: skip (no bill, no failure)
-      → miss: log + continue
-      → match: verify → log → (verified ? cache + stop : continue)
-  → clean-miss-only exhaustion: negative cache
-  → lazy recalc
-  → EnrichmentResponse(trace, cost, cached)
+  â†’ lookup_hash = SHA256(task | normalized identity)
+  â†’ cache lookup (positive or negative, TTL-bound)
+  â†’ ranked_providers(task, segment)
+  â†’ optional epsilon-greedy promotion
+  â†’ for each provider: budget gate â†’ adapter â†’ classify outcome
+      â†’ transport error: breaker + log + continue
+      â†’ unconfigured: skip (no bill, no failure)
+      â†’ miss: log + continue
+      â†’ match: verify â†’ log â†’ (verified ? cache + stop : continue)
+  â†’ clean-miss-only exhaustion: negative cache
+  â†’ lazy recalc
+  â†’ EnrichmentResponse(trace, cost, cached)
 ```
 
 ## 5. Data model
@@ -199,7 +199,7 @@ remains reachable at the bottom of the waterfall and via exploration, so it can 
 
 ### 6.7 Worked example
 
-Real numbers from one Hunter call: attempts=1, matches=1, verified=1, bounced=0, p95=2391 ms,
+Illustrative numbers for one vendor: attempts=1, matches=1, verified=1, bounced=0, p95=2391 ms,
 `cost_per_match=$0.02`.
 
 | Step | Calculation | Result |
@@ -207,18 +207,18 @@ Real numbers from one Hunter call: attempts=1, matches=1, verified=1, bounced=0,
 | effective_verified | max(0, 1 - 0) | 1 |
 | MatchRate | (1+4)/(1+10) | 0.4545 |
 | AccuracyRate | (1+3)/(1+4) | 0.8000 |
-| yield | 0.4545 × 0.8000 | 0.3636 |
-| ECPVH | (0.4545 × 0.02) / 0.3636 | 0.0250 |
-| reward | 1.0 × 0.3636 | 0.3636 |
+| yield | 0.4545 Ã— 0.8000 | 0.3636 |
+| ECPVH | (0.4545 Ã— 0.02) / 0.3636 | 0.0250 |
+| reward | 1.0 Ã— 0.3636 | 0.3636 |
 | cost penalty | 0.0250 / 0.50 | 0.0500 |
-| latency penalty | 0.5 × 2391 / 5000 | 0.2391 |
-| **score** | 0.3636 − 0.0500 − 0.2391 | **0.0745** |
+| latency penalty | 0.5 Ã— 2391 / 5000 | 0.2391 |
+| **score** | 0.3636 âˆ’ 0.0500 âˆ’ 0.2391 | **0.0745** |
 
 An untested vendor at `$0.03` per match and the default p95 (500 ms) scores:
 
 ```
-yield = 0.40 × 0.75 = 0.30
-ECPVH = (0.40 × 0.03) / 0.30 = 0.04
+yield = 0.40 Ã— 0.75 = 0.30
+ECPVH = (0.40 Ã— 0.03) / 0.30 = 0.04
 S = 0.30 - 0.08 - 0.05 = 0.17
 ```
 
@@ -248,7 +248,7 @@ Negative caching requires: at least one attempt, no transport error, no budget s
 ## 9. Caching
 
 - Key: `SHA256(task_type | normalized identity)`.
-- Identity priority: email → LinkedIn URL → name+domain (people); domain (companies).
+- Identity priority: email â†’ LinkedIn URL â†’ name+domain (people); domain (companies).
 - Positive TTL: 30 days. Negative TTL: 7 days.
 - A bounce deletes the matching cache row.
 - Cache is checked before ranking, so a hit costs zero.
@@ -260,7 +260,7 @@ Dispatch per task:
 | Task | Check |
 |---|---|
 | `work_email` | Regex syntax + DNS MX (A fallback) |
-| `mobile_phone` | E.164 normalization, 7–15 digits |
+| `mobile_phone` | E.164 normalization, 7â€“15 digits |
 | `company_firmographics` | Non-empty required keys |
 
 No port-25 SMTP. The verifier is an injectable function, so a paid HTTP verifier can replace the default
@@ -312,3 +312,4 @@ Deterministic, offline, and free:
   feedback, cold-start/zero-division, p95 math, and the golden-probe gate.
 
 Run with `python -m pytest -q`.
+
